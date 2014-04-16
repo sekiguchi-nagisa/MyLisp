@@ -44,7 +44,7 @@ public class Parser {
 		} else if(BasicArithmeticOpNode.isBasicOp(token)) {
 			return new BasicArithmeticOpNode(token);
 		} else if(token.equals("defun")) {
-			return new FunctionNode(token);
+			return new DefineFunctionNode(token);
 		} else if(token.equals("setq")) {
 			return new VariableDeclNode(token);
 		} else if(token.equals("if")) {

@@ -7,7 +7,7 @@ interface Visitor {
 	public void visitNumberNode(NumberNode node);
 	public void visitBinaryOpNode(BinaryOpNode node);
 	public void visitBasicArithmeticOpNode(BasicArithmeticOpNode node);
-	public void visitFunctionNode(FunctionNode node);
+	public void visitFunctionNode(DefineFunctionNode node);
 	public void visitSymbolNode(SymbolNode node);
 	public void visitFuncCallNode(FuncCallNode node);
 	public void visitVariableDeclNode(VariableDeclNode node);
@@ -94,17 +94,12 @@ class NumberNode extends Node {
 	private final long value;
 
 	public static boolean isNumber(String symbol) {
-		int size = symbol.length();
-		for(int i = 0; i < size; i++) {
-			char ch = symbol.charAt(i);
-			if(i == 0 && ch == '0') {
-				return false;
-			}
-			if(!Character.isDigit(ch)) {
-				return false;
-			}
+		try {
+			Long.parseLong(symbol);
+			return true;
+		} catch(Exception e) {
+			return false;
 		}
-		return true;
 	}
 
 	public NumberNode(String symbol) {
@@ -222,12 +217,12 @@ class BasicArithmeticOpNode extends BuiltinSymbolNode {	public final static int 
 	}
 }
 
-class FunctionNode extends BuiltinSymbolNode {
+class DefineFunctionNode extends BuiltinSymbolNode {
 	private static int funcName = 0;
 	private static int argList = 1;
 	private static int body = 2;
 
-	public FunctionNode(String representSymbol) {
+	public DefineFunctionNode(String representSymbol) {
 		super(representSymbol);
 	}
 

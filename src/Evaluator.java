@@ -4,28 +4,30 @@ import java.util.Stack;
 public class Evaluator implements Visitor {
 	private Object evaluatedValue;
 	private final GlobalContext context;
-	private final Stack<LocalContext> contextStack;
+	private final Stack<Context> contextStack;
 
 	public Evaluator() {
 		this.context = new GlobalContext();
-		this.contextStack = new Stack<LocalContext>();
+		this.contextStack = new Stack<Context>();
+		this.contextStack.push(this.context);
 	}
 
-	private LocalContext getLocalContext() {
-		if(this.contextStack.isEmpty()) {
-			return null;
-		}
+	private Context getLocalContext() {
 		return this.contextStack.peek();
 	}
 
 	private LocalContext createLocalContext() {
 		Context parentContext = this.getLocalContext();
-		if(parentContext == null) {
-			parentContext = this.context;
-		}
 		LocalContext localContext = new LocalContext(parentContext);
 		this.contextStack.push(localContext);
 		return localContext;
+	}
+
+	private void deleteLocalContext() {
+		this.contextStack.pop();
+		if(this.contextStack.isEmpty()) {
+			throw new RuntimeError("invalid pop operation");
+		}
 	}
 
 	public boolean isFuncCallNode(SymbolNode node) {
@@ -121,7 +123,7 @@ public class Evaluator implements Visitor {
 			this.evaluate(node.getNodeAt(0));
 		} else if(keyNode instanceof SymbolNode && this.isFuncCallNode((SymbolNode) keyNode)) {
 			this.evaluate(keyNode);
-		} else {	//FIXME
+		} else {
 			int size = node.getListSize();
 			for(int i = 0; i < size; i++) {
 				this.evaluate(node.getNodeAt(i));
@@ -130,7 +132,7 @@ public class Evaluator implements Visitor {
 	}
 
 	@Override
-	public void visitFunctionNode(FunctionNode node) {
+	public void visitFunctionNode(DefineFunctionNode node) {
 		this.context.setFuncNode(node.getFuncName(), node);
 		this.evaluatedValue = node.getFuncName();
 	}
@@ -138,9 +140,9 @@ public class Evaluator implements Visitor {
 	@Override
 	public void visitSymbolNode(SymbolNode node) {
 		String symbol = node.getSymbol();
-		LocalContext localContext = this.getLocalContext();
-		if(localContext != null && localContext.containLocalVariable(symbol)) {
-			this.evaluatedValue = this.contextStack.peek().getLocalVariable(symbol);
+		Context localContext = this.getLocalContext();
+		if(localContext.containVariable(symbol)) {
+			this.evaluatedValue = localContext.getVariable(symbol);
 			return;
 		}
 		if(this.context.containFunction(symbol)) {
@@ -152,7 +154,7 @@ public class Evaluator implements Visitor {
 
 	@Override
 	public void visitFuncCallNode(FuncCallNode node) {
-		FunctionNode funcNode = this.context.getFuncNode(node.getSymbol());
+		DefineFunctionNode funcNode = this.context.getFuncNode(node.getSymbol());
 		int size = node.getParamSize();
 		Object[] values = new Object[size];
 		for(int i = 0; i < size; i++) {
@@ -161,21 +163,17 @@ public class Evaluator implements Visitor {
 		LocalContext localContext = this.createLocalContext();
 		for(int i = 0; i < size; i++) {
 			String varName = funcNode.getArgList().getNodeAt(i).getSymbol();
-			localContext.setLocalVariable(varName, values[i]);
+			localContext.addVariable(varName, values[i]);
 		}
 		this.evaluatedValue = this.evaluate(funcNode.getFuncBody());
-		this.contextStack.pop();
+		this.deleteLocalContext();
 	}
 
 	@Override
 	public void visitVariableDeclNode(VariableDeclNode node) {
 		String symbol = node.getVariableName();
 		Object value = this.evaluate(node.getVarValueNode());
-		if(this.contextStack.isEmpty()) {
-			this.context.setVariable(symbol, value);
-		} else {
-			this.contextStack.peek().setLocalVariable(symbol, value);
-		}
+		this.getLocalContext().addVariable(symbol, value);
 		this.evaluatedValue = value;
 	}
 
@@ -203,34 +201,39 @@ class LocalContext implements Context {
 		this.variableMap = new HashMap<String, Object>();
 	}
 
-	public void setLocalVariable(String symbol, Object value) {
+	@Override
+	public Context getParentContext() {
+		return this.parentContext;
+	}
+
+	@Override
+	public Object getVariable(String symbol) {
+		Object value = this.variableMap.get(symbol);
+		if(value == null) {
+			return this.getParentContext().getVariable(symbol);
+		}
+		return value;
+	}
+
+	@Override
+	public void addVariable(String symbol, Object value) {
 		if(this.variableMap.containsKey(symbol)) {
 			throw new RuntimeError("duplicated variable: " + symbol);
 		}
 		this.variableMap.put(symbol, value);
 	}
 
-	public void updateLocalVariable(String symbol, Object value) {
+	@Override
+	public void updateVariable(String symbol, Object value) {
 		if(!this.variableMap.containsKey(symbol)) {
-			throw new RuntimeError("undefined variable: " + symbol);
+			this.getParentContext().updateVariable(symbol, value);
+			return;
 		}
 		this.variableMap.put(symbol, value);
 	}
 
-	public Object getLocalVariable(String symbol) {
-		Object value = this.variableMap.get(symbol);
-		if(value == null) {
-			throw new RuntimeError("undefined variable: " + symbol);
-		}
-		return value;
-	}
-
-	public boolean containLocalVariable(String symbol) {
-		return this.variableMap.get(symbol) != null;
-	}
-
 	@Override
-	public Context getParentContext() {
-		return this.parentContext;
+	public boolean containVariable(String symbol) {
+		return this.variableMap.containsKey(symbol) ? true : this.getParentContext().containVariable(symbol);
 	}
 }
