@@ -23,7 +23,7 @@
 		<jar jarfile="${jar_file}">
 			<fileset dir="${build_dir}" includes="**/*.class" />
 			<manifest>
-				<attribute name="Main-Class" value="Lisp" />
+				<attribute name="Main-Class" value="mylisp.Lisp" />
 			</manifest>
 		</jar>
 	</target>

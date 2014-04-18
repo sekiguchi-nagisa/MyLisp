@@ -1,9 +1,16 @@
+package mylisp;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+
+import mylisp.ast.Node;
+import mylisp.eval.Evaluator;
+import mylisp.parser.Parser;
+import mylisp.parser.Tokenizer;
 
 
 public class Lisp {
@@ -72,7 +79,9 @@ public class Lisp {
 				lineBuilder.append(line);
 			}
 			if(level < 0) {
-				System.err.println("... canceled");
+				if(line != null) {
+					System.err.println("... canceled");
+				}
 				return "";
 			}
 			return lineBuilder.toString().trim();

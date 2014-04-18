@@ -1,4 +1,7 @@
+package mylisp.eval;
 import java.util.HashMap;
+
+import mylisp.ast.DefineFunctionNode;
 
 public interface Context {
 	public Context getParentContext();

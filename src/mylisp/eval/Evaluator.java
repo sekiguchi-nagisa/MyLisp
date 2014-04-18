@@ -1,5 +1,20 @@
+package mylisp.eval;
+
 import java.util.HashMap;
 import java.util.Stack;
+
+import mylisp.ast.BasicArithmeticOpNode;
+import mylisp.ast.BinaryOpNode;
+import mylisp.ast.BuiltinSymbolNode;
+import mylisp.ast.DefineFunctionNode;
+import mylisp.ast.FuncCallNode;
+import mylisp.ast.IfNode;
+import mylisp.ast.ListNode;
+import mylisp.ast.Node;
+import mylisp.ast.NumberNode;
+import mylisp.ast.SymbolNode;
+import mylisp.ast.TopLevelListNode;
+import mylisp.ast.VariableDeclNode;
 
 public class Evaluator implements Visitor {
 	private Object evaluatedValue;
@@ -67,7 +82,7 @@ public class Evaluator implements Visitor {
 			this.evaluatedValue = (leftValue >= rightValue);
 			break;
 		default:
-			this.evaluate(new RuntimeErrorNode("undefined binary op: " + node.getSymbol()));
+			this.reportError("undefined binary op: " + node.getSymbol());
 			break;
 		}
 	}
@@ -96,7 +111,7 @@ public class Evaluator implements Visitor {
 				result /= values[i];
 				break;
 			default:
-				this.evaluate(new RuntimeErrorNode("undefined basic op: " + node.getSymbol()));
+				this.reportError("undefined basic op: " + node.getSymbol());
 				break;
 			}
 		}
@@ -106,7 +121,7 @@ public class Evaluator implements Visitor {
 	@SuppressWarnings("unchecked")
 	private <T> T checkTypeRequirement(Object value, Class<T> requireClass) {
 		if(!requireClass.isInstance(value)) {
-			this.evaluate(new RuntimeErrorNode("reuqires " + requireClass.getSimpleName() +" value: " + value.getClass().getSimpleName()));
+			this.reportError("reuqires " + requireClass.getSimpleName() +" value: " + value.getClass().getSimpleName());
 		}
 		return (T) value;
 	}
@@ -189,6 +204,10 @@ public class Evaluator implements Visitor {
 	public void visitIfNode(IfNode node) {
 		boolean cond = this.checkTypeRequirement(this.evaluate(node.getConditionNode()), Boolean.class);
 		this.evaluatedValue = cond ? this.evaluate(node.getThenNode()) : this.evaluate(node.getElseNode());
+	}
+
+	public void reportError(String message) {
+		throw new RuntimeError(message);
 	}
 }
 
